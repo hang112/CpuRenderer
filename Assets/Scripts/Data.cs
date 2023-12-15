@@ -17,7 +17,12 @@ namespace CpuRender
     /// </summary>
     public struct v2f
     {
-        public Vector3 pos;
+        /// <summary>
+        /// clip pos
+        /// </summary>
+        public Vector4 vertex;
+
+        public Vector3 worldPos;
         public Vector3 normal;
         public Vector2 uv;
         public float this[int i]
@@ -27,11 +32,11 @@ namespace CpuRender
                 switch (i)
                 {
                     case 0:
-                        return pos.x;
+                        return worldPos.x;
                     case 1:
-                        return pos.y;
+                        return worldPos.y;
                     case 2:
-                        return pos.z;
+                        return worldPos.z;
                     case 3:
                         return normal.x;
                     case 4:
@@ -50,13 +55,13 @@ namespace CpuRender
                 switch (i)
                 {
                     case 0:
-                        pos.x = value;
+                        worldPos.x = value;
                         break;
                     case 1:
-                        pos.y = value;
+                        worldPos.y = value;
                         break;
                     case 2:
-                        pos.z = value;
+                        worldPos.z = value;
                         break;
                     case 3:
                         normal.x = value;

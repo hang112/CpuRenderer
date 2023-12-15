@@ -9,7 +9,7 @@ namespace CpuRender
         Shader _shader;
 
         VAO _vao;
-        Matrix4x4 _viewMtx;
+        Matrix4x4 _vMtx;
         Matrix4x4 _mvpMtx;
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace CpuRender
             _mesh = mesh;
 
             _shader = shader;
-            _shader.cam = stage.cam;
+            _shader.camTrans = stage.cam.transform;
             _shader.lights = stage.lights;
 
             _vao = new VAO(mesh);
@@ -44,11 +44,11 @@ namespace CpuRender
         {
             var mMtx = _mesh.transform.localToWorldMatrix; ;
 
-            _viewMtx = vMtx;
+            _vMtx = vMtx;
             _mvpMtx = vpMtx * mMtx;
 
-            _shader.mMtx = mMtx;
-            _shader.mvpMtx = _mvpMtx;
+            _shader.MATRIX_M = mMtx;
+            _shader.MATRIX_MVP = _mvpMtx;
 
             RunVertexShader(verts);
             TriangleSetup(verts, triangles);
@@ -65,18 +65,15 @@ namespace CpuRender
         {
             foreach (var a2v in _vao.vbo)
             {
-                Vector4 svp = a2v.vertex;
-                svp.w = 1f;
-                svp = _mvpMtx * svp;
-
                 Vertex v = new Vertex();
-                //转换成投影坐标
+
+                v.o = _shader.vert(a2v);
+                var svp = v.o.vertex;
+                //齐次除法->屏幕映射
                 v.x = (svp.x / svp.w / 2 + 0.5f) * Stage.WIDTH;
                 v.y = (svp.y / svp.w / 2 + 0.5f) * Stage.HEIGHT;
                 //深度值
-                v.z = (svp.z / svp.w / 2 + 0.5f);
-
-                v.o = _shader.vert(a2v);
+                v.z = svp.z / svp.w / 2 + 0.5f;
 
                 verts.Add(v);
             }
@@ -97,9 +94,9 @@ namespace CpuRender
                 if (_shader.cull != ECull.Off)
                 {
                     //cull,转换到view空间
-                    var va = _viewMtx.MultiplyPoint3x4(a.o.pos);
-                    var vb = _viewMtx.MultiplyPoint3x4(b.o.pos);
-                    var vc = _viewMtx.MultiplyPoint3x4(c.o.pos);
+                    var va = _vMtx.MultiplyPoint3x4(a.o.worldPos);
+                    var vb = _vMtx.MultiplyPoint3x4(b.o.worldPos);
+                    var vc = _vMtx.MultiplyPoint3x4(c.o.worldPos);
                     var ab = vb - va;
                     var bc = vc - vb;
                     //abc面的法向量

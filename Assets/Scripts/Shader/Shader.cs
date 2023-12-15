@@ -4,17 +4,17 @@ namespace CpuRender
 {
     public abstract class Shader
     {
-        public Camera cam;
+        public Transform camTrans;
         public Light[] lights;
 
         /// <summary>
         /// model(local -> world)
         /// </summary>
-        public Matrix4x4 mMtx;
+        public Matrix4x4 MATRIX_M;
         /// <summary>
         /// model view projection
         /// </summary>
-        public Matrix4x4 mvpMtx;
+        public Matrix4x4 MATRIX_MVP;
 
         /// <summary>
         /// 是否受光照影响
@@ -92,9 +92,9 @@ namespace CpuRender
         {
             v2f o = new v2f();
 
-            //local->world
-            o.pos = mMtx.MultiplyPoint3x4(v.vertex);
-            o.normal = mMtx.MultiplyVector(v.normal);
+            o.vertex = ObjectToClipPos(v.vertex);
+            o.worldPos = ObjectToWorldPos(v.vertex);
+            o.normal = MATRIX_M.MultiplyVector(v.normal);
             o.uv = v.uv;
 
             return o;
@@ -102,7 +102,24 @@ namespace CpuRender
 
         public abstract Color frag(v2f i);
 
-        #region light
+        #region shader中的常用方法
+        protected Vector4 ObjectToClipPos(Vector3 pos)
+        {
+            Vector4 clipPos = pos;
+            clipPos.w = 1f;
+
+            clipPos = MATRIX_MVP * clipPos;
+            return clipPos;
+        }
+        protected Vector3 ObjectToWorldPos(Vector3 pos)
+        {
+            return MATRIX_M.MultiplyPoint3x4(pos);
+        }
+
+        protected Vector3 WorldSpaceCameraPos { get { return camTrans.position; } }
+
+
+
         protected void GetLightRgbColorOnVert(v2f v, out float r, out float g, out float b)
         {
             r = 0f;
@@ -121,12 +138,12 @@ namespace CpuRender
                 }
                 else if (light.type == LightType.Point)
                 {
-                    var disSqr = (light.transform.position - v.pos).sqrMagnitude;
+                    var disSqr = (light.transform.position - v.worldPos).sqrMagnitude;
                     if (disSqr > light.range * light.range)
                         continue;
 
                     atten = light.intensity / disSqr;
-                    atten *= Vector3.Dot(Vector3.Normalize(light.transform.position - v.pos), Vector3.Normalize(v.normal));
+                    atten *= Vector3.Dot(Vector3.Normalize(light.transform.position - v.worldPos), Vector3.Normalize(v.normal));
                 }
                 r += light.color.r * atten;
                 g += light.color.g * atten;

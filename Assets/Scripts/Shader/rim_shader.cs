@@ -29,7 +29,7 @@ namespace CpuRender
             var color = _mainTex.tex2D(v.uv);
             color *= _mainColor;
 
-            var viewDir = cam.transform.position - v.pos;
+            var viewDir = WorldSpaceCameraPos - v.worldPos;
             var rim = 1 - Mathf.Max(0, Vector3.Dot(Vector3.Normalize(v.normal), Vector3.Normalize(viewDir)));
             var rimPower = Mathf.Pow(rim, 1 / _rimPower);
 
