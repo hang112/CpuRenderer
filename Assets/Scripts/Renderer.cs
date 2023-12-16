@@ -69,11 +69,13 @@ namespace CpuRender
 
                 v.o = _shader.vert(a2v);
                 var svp = v.o.vertex;
-                //齐次除法->屏幕映射
-                v.x = (svp.x / svp.w / 2 + 0.5f) * Stage.WIDTH;
-                v.y = (svp.y / svp.w / 2 + 0.5f) * Stage.HEIGHT;
+                //齐次除法得到ndc坐标
+                Vector4 ndc = new Vector4(svp.x / svp.w, svp.y / svp.w, svp.z / svp.w, 1f / svp.w);
+                //屏幕映射得到屏幕坐标
+                v.x = (ndc.x / 2 + 0.5f) * Stage.WIDTH;
+                v.y = (ndc.y / 2 + 0.5f) * Stage.HEIGHT;
                 //深度值
-                v.z = svp.z / svp.w / 2 + 0.5f;
+                v.z = ndc.z / 2 + 0.5f;
 
                 verts.Add(v);
             }
@@ -257,15 +259,18 @@ namespace CpuRender
             {
                 for (int y = yMin; y <= yMax; y++)
                 {
-                    var a = t[0];
-                    var b = t[1];
-                    var c = t[2];
+                    Vertex a = t[0];
+                    Vertex b = t[1];
+                    Vertex c = t[2];
                     var barycentricCoord = Helper.GetBarycentricCoord(a, b, c, new Vector2(x, y), out var outside);
                     if (outside)
                         continue;
 
                     if (barycentricCoord.x < threshold || barycentricCoord.y < threshold || barycentricCoord.z < threshold)
                         continue;
+
+                    //w 透视矫正
+                    //todo
 
                     var frag = new Fragment();
                     frag.x = x;
