@@ -93,7 +93,8 @@ namespace CpuRender
                 bool pass = true;
                 if (_shader.cull != ECull.Off)
                 {
-                    //cull,转换到view空间
+                    //cull
+                    //需要转换到view空间
                     var va = _vMtx.MultiplyPoint3x4(a.o.worldPos);
                     var vb = _vMtx.MultiplyPoint3x4(b.o.worldPos);
                     var vc = _vMtx.MultiplyPoint3x4(c.o.worldPos);
@@ -128,9 +129,11 @@ namespace CpuRender
         /// </summary>
         void Rasterization(List<Triangle> triangles, byte[,] stecilBuffer, float[,] depthBuffer, FrameBuffer frameBuffer)
         {
+            int fragLen = 0;
             for (int i = 0; i < triangles.Count; i++)
             {
                 var fragList = Rast(triangles[i]);
+                fragLen += fragList.Count;
                 foreach (var frag in fragList)
                 {
                     //1.fragment shader
@@ -237,80 +240,47 @@ namespace CpuRender
                     frameBuffer[frag.x, frag.y] = new Color(r, g, b, a);
                 }
             }
+            //Debug.LogError($"frag count = {fragLen}");
         }
 
+        const float threshold = -0.000001f;
         List<Fragment> Rast(Triangle t)
         {
-            int xMin = (int)Mathf.Min(t[0].x, t[1].x, t[2].x);
-            int xMax = (int)Mathf.Max(t[0].x, t[1].x, t[2].x);
-            int yMin = (int)Mathf.Min(t[0].y, t[1].y, t[2].y);
-            int yMax = (int)Mathf.Max(t[0].y, t[1].y, t[2].y);
+            //clip
+            int xMin = Mathf.Clamp((int)Mathf.Min(t[0].x, t[1].x, t[2].x), 0, Stage.WIDTH - 1);
+            int xMax = Mathf.Clamp((int)Mathf.Max(t[0].x, t[1].x, t[2].x), 0, Stage.WIDTH - 1);
+            int yMin = Mathf.Clamp((int)Mathf.Min(t[0].y, t[1].y, t[2].y), 0, Stage.HEIGHT - 1);
+            int yMax = Mathf.Clamp((int)Mathf.Max(t[0].y, t[1].y, t[2].y), 0, Stage.HEIGHT - 1);
 
             var fragList = new List<Fragment>((xMax - xMin) * (yMax - yMin));
-            for (int x = xMin; x < xMax + 1; x++)
+            for (int x = xMin; x <= xMax; x++)
             {
-                for (int y = yMin; y < yMax + 1; y++)
+                for (int y = yMin; y <= yMax; y++)
                 {
-                    //过滤屏幕外的点
-                    if (x < 0 || x > Stage.WIDTH - 1 || y < 0 || y > Stage.HEIGHT - 1) continue;
+                    var a = t[0];
+                    var b = t[1];
+                    var c = t[2];
+                    var barycentricCoord = Helper.GetBarycentricCoord(a, b, c, new Vector2(x, y), out var outside);
+                    if (outside)
+                        continue;
 
-                    var px = x + 0.5f;
-                    var py = y + 0.5f;
-
-                    //过滤三角形外的点
-                    //应该不和cull相关
-                    //todo
-                    if (_shader.cull == ECull.Back)
-                    {
-                        if (!IsLeftPoint(t[0], t[1], px, py)) continue;
-                        if (!IsLeftPoint(t[1], t[2], px, py)) continue;
-                        if (!IsLeftPoint(t[2], t[0], px, py)) continue;
-                    }
-                    else if (_shader.cull == ECull.Front)
-                    {
-                        if (IsLeftPoint(t[0], t[1], px, py)) continue;
-                        if (IsLeftPoint(t[1], t[2], px, py)) continue;
-                        if (IsLeftPoint(t[2], t[0], px, py)) continue;
-                    }
+                    if (barycentricCoord.x < threshold || barycentricCoord.y < threshold || barycentricCoord.z < threshold)
+                        continue;
 
                     var frag = new Fragment();
                     frag.x = x;
                     frag.y = y;
-                    LerpFragment(t[0], t[1], t[2], frag);
+                    //重心差值
+                    frag.z = Helper.BarycentricValue(a.z, b.z, c.z, barycentricCoord);
+                    for (int i = 0; i < 8; i++)
+                    {
+                        frag.data[i] = Helper.BarycentricValue(a.o[i], b.o[i], c.o[i], barycentricCoord);
+                    }
+
                     fragList.Add(frag);
                 }
             }
             return fragList;
-        }
-        /// <summary>
-        /// 点x,y是否在线段ab左侧
-        /// </summary>
-        bool IsLeftPoint(Vertex a, Vertex b, float x, float y)
-        {
-            return (a.x - x) * (b.y - y) - (a.y - y) * (b.x - x) <= 0;
-        }
-        /// <summary>
-        /// 重心坐标系插值
-        /// </summary>
-        void LerpFragment(Vertex a, Vertex b, Vertex c, Fragment frag)
-        {
-            for (int i = 0; i < 8; i++)
-            {
-                frag.data[i] = LerpValue(a.o[i], a.x, a.y, b.o[i], b.x, b.y, c.o[i], c.x, c.y, frag.x, frag.y);
-            }
-            frag.z = LerpValue(a.z, a.x, a.y, b.z, b.x, b.y, c.z, c.x, c.y, frag.x, frag.y);
-        }
-
-        float LerpValue(float f1, float x1, float y1, float f2, float x2, float y2, float f3, float x3, float y3, float fragx, float fragy)
-        {
-            float left = (f1 * x2 - f2 * x1) / (y1 * x2 - y2 * x1) - (f1 * x3 - f3 * x1) / (y1 * x3 - y3 * x1);
-            float right = (x2 - x1) / (y1 * x2 - y2 * x1) - (x3 - x1) / (y1 * x3 - y3 * x1);
-            float c = left / right;
-            left = (f1 * x2 - f2 * x1) / (x2 - x1) - (f1 * x3 - f3 * x1) / (x3 - x1);
-            right = (y1 * x2 - y2 * x1) / (x2 - x1) - (y1 * x3 - y3 * x1) / (x3 - x1);
-            float b = left / right;
-            float a = (f1 - f3 - b * (y1 - y3)) / (x1 - x3);
-            return fragx * a + fragy * b + c;
         }
         #endregion
     }
