@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace CpuRender
@@ -139,12 +140,12 @@ namespace CpuRender
                 foreach (var frag in fragList)
                 {
                     //1.fragment shader
-                    Color srcColor = _shader.frag(frag.data);
+                    float4 srcColor = _shader.frag(frag.i);
 
                     //2.alpha test
                     if (_shader.alphaTest)
                     {
-                        if (!Helper.IfSatisfyComparison(_shader.alphaTestComp, srcColor.a, _shader.alphaTestValue))
+                        if (!Helper.IfSatisfyComparison(_shader.alphaTestComp, srcColor.w, _shader.alphaTestValue))
                         {
                             //没有通过alpha测试,像素被抛弃
                             continue;
@@ -197,17 +198,17 @@ namespace CpuRender
                         //不写入任何颜色
                         continue;
                     }
-                    Color destColor = frameBuffer[frag.x, frag.y];
-                    float r = destColor.r;
-                    float g = destColor.g;
-                    float b = destColor.b;
-                    float a = destColor.a;
+                    float4 destColor = frameBuffer[frag.x, frag.y];
+                    float r = destColor.x;
+                    float g = destColor.y;
+                    float b = destColor.z;
+                    float a = destColor.w;
                     //5.alpha blend
                     if (_shader.blend)
                     {
                         //开启blend
-                        float factor1 = srcColor.a;
-                        float factor2 = 1 - srcColor.a;
+                        float factor1 = srcColor.w;
+                        float factor2 = 1 - srcColor.w;
 
                         if ((colorMask & ColorMask.A) > 0) a = 1;
 
@@ -218,9 +219,9 @@ namespace CpuRender
                         switch (_shader.blendOp)
                         {
                             case EBlendOp.Add:
-                                if ((colorMask & ColorMask.R) > 0) r = srcColor.r * factor1 + destColor.r * factor2;
-                                if ((colorMask & ColorMask.G) > 0) g = srcColor.g * factor1 + destColor.g * factor2;
-                                if ((colorMask & ColorMask.B) > 0) b = srcColor.b * factor1 + destColor.b * factor2;
+                                if ((colorMask & ColorMask.R) > 0) r = srcColor.x * factor1 + destColor.x * factor2;
+                                if ((colorMask & ColorMask.G) > 0) g = srcColor.y * factor1 + destColor.y * factor2;
+                                if ((colorMask & ColorMask.B) > 0) b = srcColor.z * factor1 + destColor.z * factor2;
                                 break;
                             case EBlendOp.Sub:
                                 break;
@@ -234,12 +235,12 @@ namespace CpuRender
                     }
                     else
                     {
-                        if ((colorMask & ColorMask.R) > 0) r = srcColor.r;
-                        if ((colorMask & ColorMask.G) > 0) g = srcColor.g;
-                        if ((colorMask & ColorMask.B) > 0) b = srcColor.b;
-                        if ((colorMask & ColorMask.A) > 0) a = srcColor.a;
+                        if ((colorMask & ColorMask.R) > 0) r = srcColor.x;
+                        if ((colorMask & ColorMask.G) > 0) g = srcColor.y;
+                        if ((colorMask & ColorMask.B) > 0) b = srcColor.z;
+                        if ((colorMask & ColorMask.A) > 0) a = srcColor.w;
                     }
-                    frameBuffer[frag.x, frag.y] = new Color(r, g, b, a);
+                    frameBuffer[frag.x, frag.y] = new float4(r, g, b, a);
                 }
             }
             //Debug.LogError($"frag count = {fragLen}");
@@ -279,7 +280,7 @@ namespace CpuRender
                     frag.z = Helper.BarycentricValue(a.z, b.z, c.z, barycentricCoord);
                     for (int i = 0; i < 8; i++)
                     {
-                        frag.data[i] = Helper.BarycentricValue(a.o[i], b.o[i], c.o[i], barycentricCoord);
+                        frag.i[i] = Helper.BarycentricValue(a.o[i], b.o[i], c.o[i], barycentricCoord);
                     }
 
                     fragList.Add(frag);

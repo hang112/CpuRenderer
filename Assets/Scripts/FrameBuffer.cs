@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace CpuRender
@@ -8,16 +9,16 @@ namespace CpuRender
         public readonly int width;
         public readonly int height;
 
-        Color[] cols;
+        float4[] cols;
 
         public FrameBuffer(int width, int height)
         {
-            cols = new Color[width * height];
+            cols = new float4[width * height];
             this.width = width;
             this.height = height;
         }
 
-        public Color this[int x, int y]
+        public float4 this[int x, int y]
         {
             get
             {
@@ -31,7 +32,7 @@ namespace CpuRender
             }
         }
 
-        public Color this[float x, float y]
+        public float4 this[float x, float y]
         {
             get
             {
@@ -41,7 +42,7 @@ namespace CpuRender
             }
         }
 
-        public void Clear(Color c)
+        public void Clear(float4 c)
         {
             for (int i = 0, imax = cols.Length; i < imax; i++)
             {
@@ -52,7 +53,15 @@ namespace CpuRender
         public void Save(string path)
         {
             Texture2D outT = new Texture2D(width, height, TextureFormat.RGBA32, false);
-            outT.SetPixels(cols);
+
+            var colors = new Color[cols.Length];
+            for (int i = 0, imax = cols.Length; i < imax; i++)
+            {
+                var c = cols[i];
+                colors[i] = new Color(c.x, c.y, c.z, c.w);
+            }
+
+            outT.SetPixels(colors);
             byte[] bytes = outT.EncodeToPNG();
 
             File.WriteAllBytes(path, bytes);

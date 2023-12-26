@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿using Unity.Mathematics;
 
 namespace CpuRender
 {
@@ -10,9 +10,9 @@ namespace CpuRender
             colorMask = 0;
         }
 
-        public override Color frag(v2f v)
+        public override float4 frag(v2f v)
         {
-            return Color.black;
+            return float4.zero;
         }
     }
 }

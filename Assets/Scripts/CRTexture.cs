@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Unity.Mathematics;
+using UnityEngine;
 
 namespace CpuRender
 {
@@ -11,7 +12,7 @@ namespace CpuRender
 
     public class CRTexture
     {
-        Color[] _colors;
+        float4[] _colors;
         public readonly int width;
         public readonly int height;
 
@@ -19,12 +20,18 @@ namespace CpuRender
 
         public CRTexture(Texture2D t)
         {
-            _colors = t.GetPixels();
+            var tmp = t.GetPixels();
+            _colors = new float4[tmp.Length];
+            for (int i = 0, imax = tmp.Length; i < imax; i++) 
+            {
+                var c = tmp[i];
+                _colors[i] = new float4(c.r, c.g, c.b, c.a);
+            }
             width = t.width;
             height = t.height;
         }
 
-        public Color this[int x, int y]
+        public float4 this[int x, int y]
         {
             get
             {
@@ -49,7 +56,7 @@ namespace CpuRender
             }
         }
 
-        public Color this[float x, float y]
+        public float4 this[float x, float y]
         {
             get
             {
@@ -59,7 +66,7 @@ namespace CpuRender
             }
         }
 
-        public Color tex2D(Vector2 uv)
+        public float4 tex2D(Vector2 uv)
         {
             return this[uv.x, uv.y];
         }

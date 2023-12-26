@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+﻿using Unity.Mathematics;
 
 namespace CpuRender
 {
@@ -11,10 +11,10 @@ namespace CpuRender
             stencilTestComp = ECompareFunc.Equal;
         }
 
-        public override Color frag(v2f v)
+        public override float4 frag(v2f v)
         {
-            GetLightRgbColorOnVert(v, out var r, out var g, out var b);
-            return new Color(r, g, b);
+            GetAllLightsColorOnVert(v, out var lightColor);
+            return new float4(lightColor, 1);
         }
     }
 

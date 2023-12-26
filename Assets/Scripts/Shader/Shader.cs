@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Unity.Mathematics;
+using UnityEngine;
 
 namespace CpuRender
 {
@@ -100,7 +101,7 @@ namespace CpuRender
             return o;
         }
 
-        public abstract Color frag(v2f i);
+        public abstract float4 frag(v2f i);
 
         #region shader中的常用方法
         protected Vector4 ObjectToClipPos(Vector3 pos)
@@ -120,11 +121,10 @@ namespace CpuRender
 
 
 
-        protected void GetLightRgbColorOnVert(v2f v, out float r, out float g, out float b)
+        protected void GetAllLightsColorOnVert(v2f v, out float3 rgb)
         {
-            r = 0f;
-            g = 0f;
-            b = 0f;
+            rgb = float3.zero;
+
             if (!lighting || lights == null)
                 return;
 
@@ -145,9 +145,8 @@ namespace CpuRender
                     atten = light.intensity / disSqr;
                     atten *= Vector3.Dot(Vector3.Normalize(light.transform.position - v.worldPos), Vector3.Normalize(v.normal));
                 }
-                r += light.color.r * atten;
-                g += light.color.g * atten;
-                b += light.color.b * atten;
+
+                rgb += light.rgb() * atten;
             }
         }
         #endregion

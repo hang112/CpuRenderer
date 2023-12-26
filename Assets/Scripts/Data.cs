@@ -114,8 +114,8 @@ namespace CpuRender
     }
 
     /// <summary>
-    /// 顶点数据
-    /// VertexShader的输出
+    /// 顶点数据,组成Triangle
+    /// 包含VertexShader的输出
     /// </summary>
     public class Vertex
     {
@@ -147,7 +147,7 @@ namespace CpuRender
     }
 
     /// <summary>
-    /// fragment数据
+    /// 由光栅化得来的fragment数据
     /// </summary>
     public class Fragment
     {
@@ -164,7 +164,7 @@ namespace CpuRender
         /// </summary>
         public float z;
 
-        public v2f data;
+        public v2f i;
 
         public float fx { get { return x + 0.5f; } }
         public float fy { get { return y + 0.5f; } }

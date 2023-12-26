@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace CpuRender
@@ -8,7 +9,7 @@ namespace CpuRender
         public const int WIDTH = 1280;
         public const int HEIGHT = 720;
 
-        Color _stageColor;
+        float4 _stageColor;
 
         Camera _cam;
         public Camera cam => _cam;
@@ -34,8 +35,8 @@ namespace CpuRender
 
         public Stage(Camera cam, Light[] ligths)
         {
-            _stageColor = cam.backgroundColor;
-            _stageColor.a = 1f;
+            var c = cam.backgroundColor;
+            _stageColor = new float4(c.r, c.g, c.b, 1);
 
             _cam = cam;
             _lights = ligths;
